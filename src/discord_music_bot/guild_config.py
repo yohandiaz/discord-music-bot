@@ -6,6 +6,10 @@ import os
 from datetime import datetime, timedelta
 from discord.ext.commands import Context, command, Bot, Cog
 from discord import Guild
+from typing import cast
+from pathlib import Path
+from discord import VoiceChannel
+from asyncio import sleep
 
 
 def seconds_to_hms(seconds):
@@ -40,26 +44,42 @@ class GuildConfig:
                 )
                 self.voice_client.play(  # type: ignore
                     source,
-                    after=lambda e: [
-                        source.cleanup(),
-                        os.remove(filename) if self.pause_time is None else None,
-                        self.music_queue.pop() if self.pause_time is None else None,
-                        print(self.pause_time),
-                        (
-                            self.play(
-                                int((self.pause_time - self.start_time).total_seconds())
-                            )
-                            if self.pause_time is not None
-                            and self.start_time is not None
-                            else self.play()
-                        ),
-                    ],
+                    after=lambda e: self.end_track(source=source, filename=filename),
                 )
+
+    def end_track(self, source: discord.FFmpegPCMAudio, filename: Path):
+
+        source.cleanup()
+        if self.pause_time is None:
+            os.remove(filename)
+            self.music_queue.pop()
+
+        if self.pause_time is not None and self.start_time is not None:
+            self.play(int((self.pause_time - self.start_time).total_seconds()))
+        else:
+            self.play()
 
     @property
     def voice_client(self) -> VoiceClient:
         vc = discord.utils.get(self.bot.voice_clients, guild=self.guild)
-        return vc
+        return cast(VoiceClient, vc)
 
     def pause(self):
         self.pause_time = datetime.now()
+        self.voice_client.stop()
+
+    def skip(self):
+
+        self.voice_client.stop()
+
+    @property
+    def is_paused(self) -> bool:
+        return self.pause_time is not None
+
+    async def move_to_channel(self, channel: VoiceChannel):
+        vc = self.voice_client
+        if vc != channel.id:
+            self.pause()
+            await sleep(0.3)
+            vc.stop()
+            await self.voice_client.move_to(channel)

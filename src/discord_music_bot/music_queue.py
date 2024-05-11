@@ -24,3 +24,11 @@ class MusicQueue:
             return self.__music_queue.pop(0)
         else:
             return None
+
+    def __str__(self) -> str:
+        result = ""
+
+        for index, track in enumerate(self.__music_queue):
+            result += f"{index}. {track}\n"
+
+        return result
