@@ -9,10 +9,11 @@ intents.guilds = True
 intents.voice_states = True
 intents.message_content = True
 
-bot = commands.Bot(command_prefix='!', intents=intents)
+bot = commands.Bot(command_prefix="!", intents=intents)
 
 # Dictionary to keep track of music queues for each guild
 queues = {}
+
 
 def check_queue(ctx):
     # This function should be called when a song ends
@@ -25,12 +26,20 @@ def check_queue(ctx):
         # await ctx.send("Queue is empty. Leaving the voice channel.")
         pass
 
+
 def play_next_track(ctx, filename):
     # This function is responsible for playing the next track in the queue
     source = discord.FFmpegPCMAudio(filename)
-    ctx.voice_client.play(source, after=lambda e: [os.remove(filename) if os.path.exists(filename) else None, check_queue(ctx)])
+    ctx.voice_client.play(
+        source,
+        after=lambda e: [
+            os.remove(filename) if os.path.exists(filename) else None,
+            check_queue(ctx),
+        ],
+    )
 
-@bot.command(name='play', help='Searches and plays the first result from YouTube')
+
+@bot.command(name="play", help="Searches and plays the first result from YouTube")
 async def play(ctx, *, search: str):
     voice_client = ctx.voice_client
     if not voice_client:
@@ -46,29 +55,32 @@ async def play(ctx, *, search: str):
         await ctx.send(f"Added to queue: {search}")
     else:
         ytdl_format_options = {
-            'format': 'bestaudio/best',
-            'postprocessors': [{
-                'key': 'FFmpegExtractAudio',
-                'preferredcodec': 'mp3',
-                'preferredquality': '192',
-            }],
-            'outtmpl': '%(extractor)s-%(id)s-%(title)s.%(ext)s',
-            'noplaylist': True,
-            'quiet': True,
-            'no_warnings': True,
-            'default_search': 'ytsearch',
-            'source_address': '0.0.0.0'
+            "format": "bestaudio/best",
+            "postprocessors": [
+                {
+                    "key": "FFmpegExtractAudio",
+                    "preferredcodec": "mp3",
+                    "preferredquality": "192",
+                }
+            ],
+            "outtmpl": "%(extractor)s-%(id)s-%(title)s.%(ext)s",
+            "noplaylist": True,
+            "quiet": True,
+            "no_warnings": True,
+            "default_search": "ytsearch",
+            "source_address": "0.0.0.0",
         }
 
         with youtube_dl.YoutubeDL(ytdl_format_options) as ydl:
             info = ydl.extract_info(f"ytsearch:{search}", download=True)
-            video = info['entries'][0]
+            video = info["entries"][0]
             filename = ydl.prepare_filename(video)
             filename = filename.replace(".webm", ".mp3")
 
         play_next_track(ctx, filename)
 
-@bot.command(name='skip', help='Skips the current track')
+
+@bot.command(name="skip", help="Skips the current track")
 async def skip(ctx):
     if ctx.voice_client and ctx.voice_client.is_playing():
         ctx.voice_client.stop()
@@ -77,24 +89,28 @@ async def skip(ctx):
     else:
         await ctx.send("No music is currently playing.")
 
-@bot.command(name='pause', help='Pauses the music')
+
+@bot.command(name="pause", help="Pauses the music")
 async def pause(ctx):
     if ctx.voice_client and ctx.voice_client.is_playing():
         ctx.voice_client.pause()
         await ctx.send("Music paused.")
 
-@bot.command(name='resume', help='Resumes the music')
+
+@bot.command(name="resume", help="Resumes the music")
 async def resume(ctx):
     if ctx.voice_client and ctx.voice_client.is_paused():
         ctx.voice_client.resume()
         await ctx.send("Music resumed.")
 
-@bot.command(name='stop', help='Stops the music')
+
+@bot.command(name="stop", help="Stops the music")
 async def stop(ctx):
     if ctx.voice_client:
         ctx.voice_client.stop()
         queues[ctx.guild.id] = []  # Clear the queue
         await ctx.send("Music stopped and queue cleared.")
 
+
 # Get token from env variable
-bot.run(os.getenv('DISCORD_BOT_TOKEN'))
+bot.run(os.getenv("DISCORD_BOT_TOKEN"))
