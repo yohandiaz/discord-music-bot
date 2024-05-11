@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from .music_queue import MusicQueue
 from discord import VoiceClient
 import discord
@@ -8,8 +8,9 @@ from discord.ext.commands import Context, command, Bot, Cog
 from discord import Guild
 from typing import cast
 from pathlib import Path
-from discord import VoiceChannel
+from discord import VoiceChannel, Member
 from asyncio import sleep
+from datetime import timedelta, datetime
 
 
 def seconds_to_hms(seconds):
@@ -28,8 +29,36 @@ class GuildConfig:
     music_queue: MusicQueue = MusicQueue()
     start_time: datetime | None = None
     pause_time: datetime | None = None
+    _member_stats: dict[int, timedelta] = field(default_factory=dict)
+    _member_time: dict[int, datetime] = field(default_factory=dict)
 
     playing: bool = False
+
+    def __post_init__(self):
+        self._member_stats = {
+            member.id: timedelta(seconds=0) for member in self.members
+        }
+
+    @property
+    def members(self) -> list[Member]:
+        return [x for x in self.guild.members]
+
+    @property
+    def members_id_relation(self) -> dict[int, Member]:
+        return {x.id: x for x in self.members}
+
+    def add_time_to_member(self, member: Member, time: timedelta):
+
+        t = self._member_stats.get(member.id, timedelta(seconds=0))
+        self._member_stats[member.id] = t + time
+
+    def member_start_listen(self, member: Member):
+        self._member_time[member.id] = datetime.now()
+
+    def member_stop_listen(self, member: Member):
+        delta = datetime.now() - self._member_time[member.id]
+        self.add_time_to_member(member=member, time=delta)
+        del self._member_time[member.id]
 
     def play(self, start_time: int = 0):
         seconds_to_hms(start_time)
@@ -83,3 +112,28 @@ class GuildConfig:
             await sleep(0.3)
             vc.stop()
             await self.voice_client.move_to(channel)
+
+    def get_stats(self):
+
+        current_datetimes: dict[int, timedelta] = {
+            k: datetime.now() - v for k, v in self._member_time.items()
+        }
+
+        final_dict: dict[Member, timedelta] = {
+            self.members_id_relation[k]: v + current_datetimes.get(k, timedelta())
+            for k, v in self._member_stats.items()
+        }
+
+        sorted_dict = {
+            k: v
+            for k, v in sorted(
+                final_dict.items(), key=lambda item: item[1], reverse=True
+            )
+        }
+
+        return "\n".join(
+            [
+                f"{k.display_name}:{v}"
+                for k, v in {k: sorted_dict[k] for k in list(sorted_dict)[:5]}.items()
+            ]
+        )

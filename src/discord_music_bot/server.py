@@ -95,21 +95,67 @@ class Server(Cog):
 
         self.get_voice_channels
 
+    @command()
+    async def stats(self, ctx: Context):
+        if ctx.guild is None:
+            await ctx.send("This command can only be runned from a server")
+            return
+        self.register(guild=ctx.guild)
+        guild_config = self.get_guild_config(ctx.guild)
+        await ctx.send("Stats:\n" + guild_config.get_stats())
+
     @Cog.listener()
     async def on_voice_state_update(
-        self, member: Member, before: VoiceState, after: VoiceState | None
+        self, member: Member, before: VoiceState | None, after: VoiceState | None
     ):
         self.register(member.guild)
 
-        if after is None:
-            return
-        if self.__guild_relation[member.guild.id].follow == member.id:
+        guild_config = self.get_guild_config(member.guild)
 
-            if after.channel is None:
-                print("error 1")
-                return
-            guild_config = self.get_guild_config(member.guild)
+        # if the bot joins a channel
+        if (
+            self.bot.user is not None
+            and self.bot.user.id == member.id
+            and after is not None
+            and after.channel is not None
+            and after.channel.id == guild_config.voice_client.channel.id
+        ):
+            for i_member in guild_config.members:
+                if (
+                    i_member.id != self.bot.user.id
+                    and i_member.voice is not None
+                    and i_member.voice.channel is not None
+                    and after.channel.id == i_member.voice.channel.id
+                ):
+                    guild_config.member_start_listen(i_member)
 
-            if isinstance(after.channel, VoiceChannel):
+        # if someone joins on the lobby bot
+        if (
+            self.bot.user is not None
+            and self.bot.user.id != member.id
+            and after is not None
+            and after.channel is not None
+            and after.channel.id == guild_config.voice_client.channel.id
+        ):
+            guild_config.member_start_listen(member)
 
-                await guild_config.move_to_channel(after.channel)
+        if (
+            self.bot.user is not None
+            and self.bot.user.id != member.id
+            and before is not None
+            and before.channel is not None
+            and before.channel.id == guild_config.voice_client.channel.id
+        ):
+            guild_config.member_stop_listen(member)
+
+        if after is not None:
+            if guild_config.follow == member.id:
+
+                if after.channel is None:
+                    print("error 1")
+                    return
+                guild_config = self.get_guild_config(member.guild)
+
+                if isinstance(after.channel, VoiceChannel):
+
+                    await guild_config.move_to_channel(after.channel)
