@@ -9,6 +9,7 @@
 - [Docker](https://docs.docker.com/get-docker/)
 - [Docker Compose](https://docs.docker.com/compose/install/)
 - A Discord bot token. You can create a bot and get the token from the [Discord Developer Portal](https://discord.com/developers/applications).
+- A Spotify client id and client secret app [Spotify Developer Portal](https://developer.spotify.com/)
 
 ## Getting Started
 
@@ -17,7 +18,7 @@
 First, clone the repository to your local machine:
 
 ```bash
-git clone https://github.com/yourusername/discord-music-bot.git
+git clone https://github.com/yohandiaz/discord-music-bot.git
 cd discord-music-bot
 ```
 
