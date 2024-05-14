@@ -4,3 +4,4 @@ services:
     env_file:
       - .env
     command: ["python", "run.py"]
+    restart: always

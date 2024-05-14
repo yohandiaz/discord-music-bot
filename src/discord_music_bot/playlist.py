@@ -37,5 +37,7 @@ class Playlist:
         playlist = self.__spotify.playlist_items(self.get_playlist_id())
         for item in playlist["items"]:
             track = item["track"]
-            tracks.append(Track(track["name"]))
+            tracks.append(Track(track["name"] +
+                                " " +
+                                track["artists"][0]["name"]))
         return tracks
