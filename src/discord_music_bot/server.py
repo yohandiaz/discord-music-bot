@@ -51,9 +51,7 @@ class Server(Cog):
             tracks = playlist.get_tracks()
             playlist.add_to_queue(tracks, guild_config)
             await ctx.send("Playlist added to queue!")
-
-        track = Track(args[0])
-        if track.is_youtube_url:
+        else:
             guild_config.music_queue.add(Track(args[0]))
             await ctx.send("Track added to queue!")
 
