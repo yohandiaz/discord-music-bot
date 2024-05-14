@@ -1,0 +1,7 @@
+services:
+  discord_music_bot:
+    image: yohandiaz/discord_music_bot:latest
+    env_file:
+      - .env
+    command: ["python", "run.py"]
+    restart: always
