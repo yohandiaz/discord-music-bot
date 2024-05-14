@@ -52,7 +52,8 @@ class Server(Cog):
             playlist.add_to_queue(tracks, guild_config)
             await ctx.send("Playlist added to queue!")
         else:
-            guild_config.music_queue.add(Track(args[0]))
+            track_name = "_".join(args)
+            guild_config.music_queue.add(Track(track_name))
             await ctx.send("Track added to queue!")
 
         if not guild_config.voice_client.is_playing():
