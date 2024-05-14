@@ -3,14 +3,18 @@ from discord.ext.commands import Context, command, Bot, Cog
 from discord import VoiceState, Member, Guild
 from .guild_config import GuildConfig
 from .track import Track
+from .playlist import Playlist
 
 from discord import VoiceChannel
+
+from spotipy import Spotify
 
 
 class Server(Cog):
 
-    def __init__(self, bot: Bot) -> None:
+    def __init__(self, bot: Bot, spotify: Spotify) -> None:
         self.bot = bot
+        self.spotify = spotify
         self.__guild_relation: dict[int, GuildConfig] = {}
 
     def registered_guild(self, guild_id: int) -> bool:
@@ -33,11 +37,26 @@ class Server(Cog):
             await ctx.send("This command can only be runned from a server")
             return
 
-        track_name = "_".join(args)
+        if args is None:
+            await ctx.send("Please provide a track name or spotify playlist!")
+            return
+
         if ctx.voice_client is None:
             await ctx.author.voice.channel.connect()  # type: ignore
+
         guild_config = self.get_guild_config(ctx.guild)
-        guild_config.music_queue.add(Track(track_name))
+
+        playlist = Playlist(self.spotify, args[0])
+        if playlist.is_playlist_url:
+            tracks = playlist.get_tracks()
+            playlist.add_to_queue(tracks, guild_config)
+            await ctx.send("Playlist added to queue!")
+
+        track = Track(args[0])
+        if track.is_youtube_url:
+            guild_config.music_queue.add(Track(args[0]))
+            await ctx.send("Track added to queue!")
+
         if not guild_config.voice_client.is_playing():
             guild_config.play()
 
